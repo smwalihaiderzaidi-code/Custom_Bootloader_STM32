@@ -1,0 +1,14 @@
+# Local Git metadata (never upload this)
+.git/
+
+# STM32CubeIDE / Eclipse generated workspace metadata
+.metadata/
+**/.metadata/
+
+# Optional: common generated build output (keep only if you do not want to track these)
+# Debug/
+# *.bin
+# *.elf
+# *.hex
+# *.map
+# *.lst

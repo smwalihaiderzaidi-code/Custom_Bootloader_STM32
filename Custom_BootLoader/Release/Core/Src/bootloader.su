@@ -1,0 +1,4 @@
+../Core/Src/bootloader.c:42:6:Boot_IsAddressValid	0	static
+../Core/Src/bootloader.c:74:6:Boot_IsMagicValid	0	static
+../Core/Src/bootloader.c:81:6:Boot_IsCrcValid	12	static
+../Core/Src/bootloader.c:106:6:Boot_JumpToApplication	8	static,ignoring_inline_asm
