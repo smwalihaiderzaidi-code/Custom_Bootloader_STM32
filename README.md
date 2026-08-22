@@ -1,8 +1,8 @@
-# STM32G431CBUX Dual-Image Bootloader and Application Configuration
+# STM32G431CBUX Bootloader and Application Configuration
 
 ## Document Purpose
 
-This documentation describes the STM32CubeIDE configuration for a CRC-validated dual-image bootloader system on the STM32G431CBUX microcontroller. The system consists of two independent projects:
+This documentation describes the STM32CubeIDE configuration for a CRC-validated bootloader system on the STM32G431CBUX microcontroller. The system consists of two independent projects:
 
 - **Custom_BootLoader**: First-stage boot code with application validation
 - **Application_Jump**: FreeRTOS-based application with metadata header
