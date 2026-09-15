@@ -1,4 +1,5 @@
 Core/Src/bootloader.o: ../Core/Src/bootloader.c ../Core/Inc/bootloader.h \
+ ../Core/Inc/app_Header.h \
  ../Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g4xx.h \
  ../Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g431xx.h \
  ../Drivers/CMSIS/Include/core_cm4.h \
@@ -25,6 +26,7 @@ Core/Src/bootloader.o: ../Core/Src/bootloader.c ../Core/Inc/bootloader.h \
  ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr.h \
  ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr_ex.h
 ../Core/Inc/bootloader.h:
+../Core/Inc/app_Header.h:
 ../Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g4xx.h:
 ../Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g431xx.h:
 ../Drivers/CMSIS/Include/core_cm4.h:

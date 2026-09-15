@@ -1,0 +1,11 @@
+# Compiler-generated intermediate files
+*.o
+*.d
+*.su
+*.cyclo
+
+# Generated build outputs
+*.elf
+*.map
+*.list
+*.bin

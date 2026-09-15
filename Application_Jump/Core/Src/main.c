@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include "app_Header.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -34,26 +35,6 @@ typedef StaticTask_t osStaticThreadDef_t;
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-typedef struct
-{
-	uint32_t version;
-	uint32_t size;
-	uint32_t magic;
-	uint32_t crc;
-
-} AppHeader_t;
-
-
-
-
-#define BOOT_API_ADDRESS 0x08007800
-typedef struct
-{
-	void (*Blink)(void);
-	void (*TurnOn)(void);
-	void (*TurnOff)(void);
-
-}BootApi_t;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -117,22 +98,6 @@ void T_500msTask(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-const BootApi_t *api = (const BootApi_t *)BOOT_API_ADDRESS;
-
-
-
-
-__attribute__((section(".app_header"),used))
-const AppHeader_t appheader =
-{
-	.version = 1,
-	.size = 0x11111111U,	/* Patched after build */
-	.magic = 0x50505050U,
-	.crc = 0xAAAAAAAAU	/* Patched after build */
-};
-
-
-
 
 #define SRAM_START 0x20000000U
 #define SRAM_END 0x20008000U
@@ -163,7 +128,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  App_Init();
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -178,9 +143,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
   for(int i=0; i<25;i++)
   {
-	  api->TurnOn();
+	  gBootApi->TurnOn();
 	    HAL_Delay(50);
-	   api->TurnOff();
+	    gBootApi->TurnOff();
 	    HAL_Delay(50);
   }
   HAL_Delay(2000);
@@ -328,10 +293,10 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    api->TurnOn();
+	  gBootApi->TurnOn();
     osDelay(300);
     default_counter++;
-    api->TurnOff();
+    gBootApi->TurnOff();
     osDelay(300);
   }
   /* USER CODE END 5 */

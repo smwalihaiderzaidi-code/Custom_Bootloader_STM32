@@ -46,7 +46,7 @@ MEMORY
 {
   RAM    (xrw)    : ORIGIN = 0x20000000,   LENGTH = 32K
   FLASH	(rx)    : ORIGIN = 0x08000000,   LENGTH = 30K  				/* 30K = 0x7800 */
-  MY_MEM	(rx) 	: ORIGIN = 0x08000000 + 0x7800, LENGTH = 2K
+  BOOT_META	(rx) 	: ORIGIN = 0x08000000 + 0x7800, LENGTH = 2K
 }
 
 /* Sections */
@@ -62,26 +62,7 @@ SECTIONS
     . = ALIGN(4);
   } >FLASH
 
-/*---------------------------------------------------------------------*/
 
- .api_shared :
-  {
-    . = ALIGN(4);
-    KEEP(*(.api_shared)) /* Startup code */
-    . = ALIGN(4);
-  } >MY_MEM
-  
- .my_mem_text :
-  {
-    . = ALIGN(4);
-    KEEP(*(.my_mem_text)) /* Startup code */
-    . = ALIGN(4);
-  } >MY_MEM
-
-
-
-
-/*---------------------------------------------------------------------*/
 
   /* The program code and other data into "FLASH" Rom type memory */
   .text :
@@ -99,6 +80,32 @@ SECTIONS
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
   } >FLASH
+  
+  
+  /*---------------------------------------------------------------------*/
+
+ .api_shared :
+  {
+    . = ALIGN(4);
+    KEEP(*(.api_shared)) /* Startup code */
+    . = ALIGN(4);
+  } >FLASH
+  
+ .my_mem_text :
+  {
+    . = ALIGN(4);
+    KEEP(*(.my_mem_text)) /* Startup code */
+    . = ALIGN(4);
+  } >FLASH
+
+
+ .metadata :
+ {
+    KEEP(*(.metadata)) /* This is the known address that (Meta Data) that Application must know*/
+ } >BOOT_META
+ 
+
+/*---------------------------------------------------------------------*/
 
   /* Constant data into "FLASH" Rom type memory */
   .rodata :

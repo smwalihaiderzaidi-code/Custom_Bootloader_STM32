@@ -5,10 +5,16 @@
 .metadata/
 **/.metadata/
 
-# Optional: common generated build output (keep only if you do not want to track these)
-# Debug/
-# *.bin
-# *.elf
-# *.hex
-# *.map
-# *.lst
+# Common generated build output
+**/Debug/
+**/Release/
+*.o
+*.d
+*.su
+*.cyclo
+*.list
+*.bin
+*.elf
+*.hex
+*.map
+*.lst

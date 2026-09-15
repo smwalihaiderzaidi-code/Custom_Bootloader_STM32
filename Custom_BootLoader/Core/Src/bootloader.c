@@ -1,4 +1,5 @@
 #include "bootloader.h"
+#include "app_Header.h"
 #include "stm32g4xx.h"
 #include "stm32g4xx_hal.h"
 
@@ -29,15 +30,6 @@ static uint32_t Boot_CalculateCRC32(const uint8_t *data,
     return crc ^ 0xFFFFFFFFU;
 }
 
-
-typedef struct
-{
-	uint32_t version;
-	uint32_t size;
-	uint32_t magic;
-	uint32_t crc;
-
-} AppHeader_t;
 
 bool Boot_IsAddressValid(void)
 {
@@ -100,7 +92,7 @@ bool Boot_IsCrcValid(void)
         (appHeader->size == 0xFFFFFFFFU) ||
         (appHeader->size > maxAppSize))
     {
-        //return false;
+        return false;
     }
 
     /* Prevent address overflow */

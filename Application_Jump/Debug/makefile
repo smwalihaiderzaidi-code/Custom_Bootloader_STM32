@@ -86,6 +86,7 @@ clean:
 	-@echo ' '
 
 post-build:
+	arm-none-eabi-objcopy -O binary "Application_Jump.elf" "Application_Jump.bin"
 	python "C:/ST/workspace/GitHub/Application_Jump/patch_crc.py" "Application_Jump.bin"
 	-@echo ' '
 

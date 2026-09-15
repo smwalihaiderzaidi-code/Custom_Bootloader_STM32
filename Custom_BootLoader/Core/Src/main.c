@@ -19,11 +19,10 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "bootloader.h"
+#include "app_Header.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#define MOVE_FUNC __attribute__((section(".my_mem_text")))
-#define SHARED_API __attribute__((section(".api_shared")))
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -38,16 +37,6 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
-
-typedef struct
-{
-	void (*Blink)(void);
-	void (*TurnOn)(void);
-	void (*TurnOff)(void);
-
-}BootApi_t;
-
 
 
 /* USER CODE END PM */
@@ -66,28 +55,6 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void MOVE_FUNC Led_Toggle(void)
-{
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_9);
-}
-
-void MOVE_FUNC Led_On(void)
-{
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
-}
-
-void MOVE_FUNC Led_Off(void)
-{
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
-}
-
-SHARED_API const BootApi_t BootApi =
-{
-	.Blink = Led_Toggle,
-	.TurnOn = Led_On,
-	.TurnOff = Led_Off
-};
-
 /* USER CODE END 0 */
 
 /**
