@@ -1,9 +1,0 @@
-../Core/Src/main.c:104:6:FillEntireRam	16	static
-../Core/Src/main.c:118:5:main	16	static
-../Core/Src/main.c:211:6:SystemClock_Config	88	static
-../Core/Src/main.c:252:13:MX_GPIO_Init	32	static
-../Core/Src/main.c:290:6:StartDefaultTask	16	static
-../Core/Src/main.c:312:6:T_100msTask	16	static
-../Core/Src/main.c:331:6:T_500msTask	16	static
-../Core/Src/main.c:351:6:HAL_TIM_PeriodElapsedCallback	16	static
-../Core/Src/main.c:369:6:Error_Handler	4	static,ignoring_inline_asm

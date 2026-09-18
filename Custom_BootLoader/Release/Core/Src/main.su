@@ -1,6 +1,0 @@
-../Core/Src/main.c:69:16:Led_Toggle	0	static
-../Core/Src/main.c:74:16:Led_On	0	static
-../Core/Src/main.c:79:16:Led_Off	0	static
-../Core/Src/main.c:163:6:SystemClock_Config	88	static,ignoring_inline_asm
-../Core/Src/main.c:97:5:main	16	static
-../Core/Src/main.c:207:6:Error_Handler	0	static,ignoring_inline_asm

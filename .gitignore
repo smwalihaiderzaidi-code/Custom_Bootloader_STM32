@@ -1,20 +1,28 @@
-# Local Git metadata (never upload this)
-.git/
-
-# STM32CubeIDE / Eclipse generated workspace metadata
-.metadata/
-**/.metadata/
-
-# Common generated build output
-**/Debug/
-**/Release/
+# STM32 generated files
 *.o
 *.d
 *.su
-*.cyclo
-*.list
-*.bin
+*.a
 *.elf
+*.bin
 *.hex
 *.map
-*.lst
+*.list
+*.log
+*.axf
+*.out
+*.obj
+*.tmp
+*.bak
+*.orig
+
+# IDE / tool outputs
+Debug/
+Release/
+*.launch
+.vscode/
+.metadata/
+
+# OS files
+.DS_Store
+Thumbs.db

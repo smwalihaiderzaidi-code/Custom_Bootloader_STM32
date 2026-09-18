@@ -1,3 +1,5 @@
+"./Core/Src/Src/app_ota.o"
+"./Core/Src/Src/flash_Operations.o"
 "./Core/Src/app_Header.o"
 "./Core/Src/bootloader.o"
 "./Core/Src/main.o"

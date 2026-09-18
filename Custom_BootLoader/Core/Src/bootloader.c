@@ -2,8 +2,20 @@
 #include "app_Header.h"
 #include "stm32g4xx.h"
 #include "stm32g4xx_hal.h"
+#include "app_ota.h"
 
 typedef void (*ApplicationEntry_t)(void);
+
+BootloaderStatus_t blstatus;
+
+void Boot_IsUpdateAvailable()
+{
+	if(check_ota_flag() == 1)
+	{
+		while(1);
+	}
+
+}
 
 static uint32_t Boot_CalculateCRC32(const uint8_t *data,
                                     uint32_t length)
@@ -30,7 +42,6 @@ static uint32_t Boot_CalculateCRC32(const uint8_t *data,
     return crc ^ 0xFFFFFFFFU;
 }
 
-
 bool Boot_IsAddressValid(void)
 {
     uint32_t appMsp;
@@ -43,6 +54,7 @@ bool Boot_IsAddressValid(void)
     if ((appMsp < SRAM_START_ADDRESS) ||
         (appMsp > SRAM_END_ADDRESS))
     {
+    	blstatus = BOOTLOADER_INVALID_STACK_POINTER;
         return false;
     }
 
@@ -50,12 +62,14 @@ bool Boot_IsAddressValid(void)
     if ((appResetHandler < APP_START_ADDRESS) ||
         (appResetHandler >= APP_END_ADDRESS))
     {
+    	blstatus = BOOTLOADER_INVALID_RESET_HANDLER;
         return false;
     }
 
     /* Cortex-M function pointer must have Thumb bit set */					//I DONT KNOW
     if ((appResetHandler & 0x1U) == 0U)
     {
+    	blstatus = BOOTLOADER_INVALID_THUMB_BIT;
         return false;
     }
 
@@ -66,7 +80,13 @@ bool Boot_IsAddressValid(void)
 bool Boot_IsMagicValid(void)
 {
 	const AppHeader_t *appHeader = (const AppHeader_t *)APP_HEADER_ADDRESS;
-	return (appHeader->magic == APP_MAGIC_VALUE);
+	if(appHeader->magic != APP_MAGIC_VALUE)
+	{
+		blstatus = BOOTLOADER_INVALID_MAGIC;
+		return false;
+	}
+
+	return true;
 }
 
 
@@ -81,38 +101,36 @@ bool Boot_IsCrcValid(void)
 
     maxAppSize = APP_END_ADDRESS - APP_START_ADDRESS;
 
-    /* Validate header */
-    if (appHeader->magic != APP_MAGIC_VALUE)
-    {
-        return false;
-    }
 
     /* Validate patched application size */
-    if ((appHeader->size == 0U) ||
-        (appHeader->size == 0xFFFFFFFFU) ||
-        (appHeader->size > maxAppSize))
+    if ((appHeader->size == 0U) || (appHeader->size == 0xFFFFFFFFU) || (appHeader->size > maxAppSize))
     {
+    	blstatus = BOOTLOADER_INVALID_APP_SIZE;
         return false;
     }
 
     /* Prevent address overflow */
     if ((APP_START_ADDRESS + appHeader->size) > APP_END_ADDRESS)
     {
+    	blstatus = BOOTLOADER_ADDRESS_OVERFLOW;
         return false;
     }
 
     /* Reject placeholder CRC values */
-    if ((appHeader->crc == 0xFFFFFFFFU) ||
-        (appHeader->crc == 0xAAAAAAAAU))
+    if ((appHeader->crc == 0xFFFFFFFFU) || (appHeader->crc == 0xAAAAAAAAU))
     {
+    	blstatus = BOOTLOADER_FOUND_PLACEHOLDER_CRC;
         return false;
     }
-    calculatedCrc = Boot_CalculateCRC32(
-                               (const uint8_t *)APP_START_ADDRESS,
-                               appHeader->size);
+    calculatedCrc = Boot_CalculateCRC32( (const uint8_t *)APP_START_ADDRESS, appHeader->size);
 
 
-    return (calculatedCrc == appHeader->crc);
+    if(calculatedCrc != appHeader->crc)
+    {
+    	blstatus = BOOTLOADER_INVALID_APP_CRC;
+    	return false;
+    }
+    return true;
 }
 
 __attribute__((noreturn))

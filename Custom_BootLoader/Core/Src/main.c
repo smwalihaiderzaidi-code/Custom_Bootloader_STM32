@@ -87,6 +87,8 @@ int main(void)
   /* Initialize all configured peripherals */
   /* USER CODE BEGIN 2 */
 
+  Boot_IsUpdateAvailable();
+
   bool addrValid = Boot_IsAddressValid();
   bool magicValid = Boot_IsMagicValid();
   bool crcValid = Boot_IsCrcValid();

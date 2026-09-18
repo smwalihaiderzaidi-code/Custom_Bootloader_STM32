@@ -1,54 +1,109 @@
 # Custom Bootloader - STM32G431
 
 ## Overview
-`Custom_BootLoader` starts at the STM32G431CBUX Flash base address and validates the application before transferring control to it. It also provides shared LED functions that remain available to the application after the jump.
 
-## Flash Layout
+`Custom_BootLoader` is the first-stage firmware that runs immediately after reset. Its job is to validate the application image, handle a simple OTA request flag, and then jump into the application if the image is valid.
 
-- **Bootloader Flash**: `0x08000000`, 32 KB
-- **Application Flash**: `0x08008000`, 68 KB
-- **Application header**: `0x08008200`
-- **Shared API region**: `0x08019000`, 28 KB
-- **End of device Flash**: `0x08020000`
+This is a good bootloader architecture for a small MCU project because the validation logic stays isolated from the application runtime. The bootloader is intentionally minimal and deterministic.
 
-The bootloader linker script places the shared API table in `.api_shared` at `0x08019000` and the API implementation functions in `.my_mem_text` in the same shared memory region.
+## Responsibilities
 
-## Application Validation
+The bootloader is responsible for:
 
-Before jumping, `main()` performs these checks:
+- reading the application vector table at `APP_START_ADDRESS`,
+- validating the application stack pointer and reset handler,
+- checking the app header magic value,
+- computing and comparing the CRC over the application image,
+- handling a pending OTA request in the application header,
+- transferring control into the application with a clean CPU state.
 
-1. Reads the application initial stack pointer from `0x08008000` and confirms it is inside SRAM (`0x20000000` to `0x20008000`).
-2. Reads the application reset handler from `0x08008004` and confirms it is inside the application Flash range and has the Thumb bit set.
-3. Checks the application header magic at `0x08008200` against `0x50505050`.
-4. Checks the application header CRC against the currently configured value `0x12345`.
+## Actual memory layout
 
-If any check fails, the bootloader remains in an infinite loop. The CRC is currently a fixed comparison value, not a calculated image CRC.
+The code uses the following addresses from the shared flash layout definitions:
 
-## Application Jump
+```text
+0x08000000  Bootloader image start
+0x08007800  Reserved boot metadata area
+0x08008000  Application header start
+0x08008800  Application image start
+0x08020000  Flash end
+```
 
-`Boot_JumpToApplication()`:
+The important implementation constants are:
 
-- Disables interrupts and stops the SysTick timer.
-- Deinitializes the HAL and RCC.
-- Disables and clears NVIC interrupts.
-- Sets `SCB->VTOR` to `0x08008000`.
-- Loads the application's initial MSP.
-- Enables interrupts and calls the application reset handler.
+- `FLASH_APPLICATION_START = 0x08008800`
+- `FLASH_APP_HEADER_START = 0x08008000`
+- `APP_MAGIC_VALUE = 0x50505050`
+- `SRAM_START_ADDRESS = 0x20000000`
+- `SRAM_END_ADDRESS = 0x20008000`
 
-## Shared LED API
+## Validation sequence
 
-The bootloader exports this function table at `0x08019000`:
+`main.c` calls the following checks in sequence before jumping:
 
-- `Blink`
-- `TurnOn`
-- `TurnOff`
+1. `Boot_IsUpdateAvailable()`
+   - checks whether the OTA flag in the app header was requested.
+2. `Boot_IsAddressValid()`
+   - verifies the MSP is in SRAM,
+   - verifies the reset handler is in application flash,
+   - verifies the reset handler Thumb bit is set.
+3. `Boot_IsMagicValid()`
+   - ensures the application header magic equals `0x50505050`.
+4. `Boot_IsCrcValid()`
+   - validates the application size,
+   - rejects placeholder CRC values,
+   - calculates a CRC32 over the application region and compares it to the header.
 
-The functions control LED pin PB9. The application reads this table using the same fixed address and calls `TurnOn` and `TurnOff` from its FreeRTOS tasks.
+If any check fails, the bootloader enters a permanent loop. This is intentionally strict and safe.
 
-## Device Information
+## Jump operation
 
-- **MCU**: STM32G431CBUX
-- **Total Flash**: 128 KB
-- **RAM**: 32 KB
-- **Bootloader source**: `Core/Src/main.c` and `Core/Src/bootloader.c`
-- **Linker script**: `STM32G431CBUX_FLASH.ld`
+`Boot_JumpToApplication()` performs the final transfer:
+
+- disables interrupts,
+- suspends SysTick,
+- deinitializes HAL and RCC,
+- clears NVIC interrupts,
+- sets `SCB->VTOR = APP_START_ADDRESS`,
+- loads the new MSP,
+- calls the application reset handler.
+
+This is the correct approach for a bare-metal jump from one image to another on STM32 devices.
+
+## Shared API contract
+
+The bootloader exports a shared API table using a fixed memory section (`.api_shared`) and function section (`.my_mem_text`). The application reads the function pointers via `metadata_t` and `BootApi_t`:
+
+- `Blink()`
+- `TurnOn()`
+- `TurnOff()`
+
+This provides a minimal runtime API while keeping the bootloader code in a protected flash region.
+
+## Design strengths
+
+- Very clear reset-time responsibilities.
+- Small code footprint.
+- Uses a real CRC-32 validation step instead of trusting an unverified image.
+- Provides a simple and stable app-to-bootloader contract.
+
+## Important limitations
+
+This implementation is a strong prototype, but it is not a production-grade secure boot design:
+
+- only one application image is considered valid at a time,
+- the header is manually updated with the correct size and CRC,
+- no signed image verification or anti-rollback protection is present,
+- the memory layout is static and must stay consistent across the build.
+
+## Relevant files
+
+- `Core/Src/main.c`
+- `Core/Src/bootloader.c`
+- `Core/Src/app_Header.c`
+- `Core/Inc/bootloader.h`
+- `STM32G431CBUX_FLASH.ld`
+- `../Common/Inc/flash_layout.h`
+- `../Common/Inc/app_Header.h`
+
+The bootloader design is good for small embedded systems and firmware update experiments, but it would need more safety measures for large-scale field deployment.

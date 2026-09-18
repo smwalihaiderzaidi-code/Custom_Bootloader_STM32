@@ -16,5 +16,7 @@ const AppHeader_t appheader =
     .version = 1U,
     .size = 0x11111111U,
     .magic = 0x50505050U,
-    .crc = 0xAAAAAAAAU
+    .crc = 0xAAAAAAAAU,
+    .ota_update = 0U,
+    .reserved = 0xFFFFFFFFU
 };

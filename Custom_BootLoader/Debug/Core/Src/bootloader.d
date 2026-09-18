@@ -1,5 +1,7 @@
 Core/Src/bootloader.o: ../Core/Src/bootloader.c ../Core/Inc/bootloader.h \
- ../Core/Inc/app_Header.h \
+ C:/ST/workspace/GitHub/Common/Inc/flash_layout.h \
+ C:/ST/workspace/GitHub/Common/Inc/app_Header.h \
+ C:/ST/workspace/GitHub/Common/Inc/flash_layout.h \
  ../Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g4xx.h \
  ../Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g431xx.h \
  ../Drivers/CMSIS/Include/core_cm4.h \
@@ -24,9 +26,12 @@ Core/Src/bootloader.o: ../Core/Src/bootloader.c ../Core/Inc/bootloader.h \
  ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_flash_ex.h \
  ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_flash_ramfunc.h \
  ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr.h \
- ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr_ex.h
+ ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr_ex.h \
+ C:/ST/workspace/GitHub/Common/Inc/app_ota.h
 ../Core/Inc/bootloader.h:
-../Core/Inc/app_Header.h:
+C:/ST/workspace/GitHub/Common/Inc/flash_layout.h:
+C:/ST/workspace/GitHub/Common/Inc/app_Header.h:
+C:/ST/workspace/GitHub/Common/Inc/flash_layout.h:
 ../Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g4xx.h:
 ../Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g431xx.h:
 ../Drivers/CMSIS/Include/core_cm4.h:
@@ -52,3 +57,4 @@ Core/Src/bootloader.o: ../Core/Src/bootloader.c ../Core/Inc/bootloader.h \
 ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_flash_ramfunc.h:
 ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr.h:
 ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr_ex.h:
+C:/ST/workspace/GitHub/Common/Inc/app_ota.h:

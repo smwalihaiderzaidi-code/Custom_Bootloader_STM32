@@ -1,284 +1,103 @@
-# STM32G431CBUX Bootloader and Application Configuration
+# STM32G431CBUX Bootloader and Application Architecture
 
-## Document Purpose
+## Architecture assessment
 
-This documentation describes the STM32CubeIDE configuration for a CRC-validated bootloader system on the STM32G431CBUX microcontroller. The system consists of two independent projects:
+This project follows a sound embedded pattern for a small bootloader-based firmware system: a minimal first-stage bootloader owns reset-time validation and control transfer, while the application project contains the user logic and the runtime services it needs.
 
-- **Custom_BootLoader**: First-stage boot code with application validation
-- **Application_Jump**: FreeRTOS-based application with metadata header
+In other words, the architecture is good for a prototype, educational project, or a constrained production update flow with a single application slot. It is not a hardened production-safe bootloader design yet because it relies on static addresses, a single image slot, and a manual post-build CRC patching workflow.
 
-The bootloader validates the application using version, size, magic number, and CRC-32 before transferring control.
+## System structure
 
----
+The workspace contains three meaningful layers:
 
-## Quick Reference: Memory Map
+- `Custom_BootLoader`: first-stage reset handler, flash validation, OTA request handling, and jump into the app.
+- `Application_Jump`: runtime firmware built as an independent STM32 project and placed at a known flash offset.
+- `Common`: shared constants and data definitions that define the contract between the bootloader and the application.
 
+This split keeps responsibilities clean and easy to reason about:
+
+- the bootloader validates the application before execution,
+- the application owns task logic and runtime behaviour,
+- the shared header and flash layout guarantee a consistent memory contract.
+
+## Actual flash layout
+
+The implementation uses the following layout defined by the common header and linker scripts:
+
+```text
+0x08000000 ┌───────────────────────────────┐
+           │ Bootloader code + vectors     │  30 KB
+           │ Custom_BootLoader             │
+0x08007800 ├───────────────────────────────┤
+           │ Reserved metadata area        │   2 KB
+           │ .metadata / boot metadata     │
+0x08008000 ├───────────────────────────────┤
+           │ Application header            │   2 KB
+           │ version, size, magic, crc     │
+0x08008800 ├───────────────────────────────┤
+           │ Application image             │  ~96 KB
+           │ vector table + .text + .data  │
+0x08020000 └───────────────────────────────┘
 ```
-STM32G431CBUX Flash Memory Layout
-===================================
-
-0x08000000 ┌─────────────────────────────┐
-           │   BOOTLOADER CODE           │  30 KB
-           │   Vector table + code       │
-           │   (Custom_BootLoader.elf)   │
-0x08007800 ├─────────────────────────────┤
-           │     SHARED API REGION       │  2 KB
-0x08008000 ├─────────────────────────────┤
-           │ Application Header          │  256 B
-           │ (Metadata, CRC, Magic)      │
-           │                             │
-0x08008100 ├─────────────────────────────┤
-           │                             │
-           │   APPLICATION CODE          │  68 KB
-           │   Vector Table              │
-           │   Code, Constants           │  (Application_Jump.elf)
-           │   (Starting at ISR vector)  │
-           │                             │
-           │                             │
-           │                             │
-           │                             │
-0x08020000 └─────────────────────────────┘
-           Flash End
-```
-
-### Memory Breakdown
 
 | Region | Start | End | Size | Purpose |
 |--------|-------|-----|------|---------|
-| Bootloader | 0x08000000 | 0x080077FF | 30 KB | Boot validation and jump logic |
-| Shared API | 0x08007800 | 0x08007FFF | 2 KB | LED functions (persistent across boot) |
-| App Header | 0x08008000 | 0x080080FF | 256 B | Version, size, magic, CRC |
-| App Code | 0x08008100 | 0x08018FFF | 68 KB | Vector table and executable code |
-| **Total Flash** | 0x08000000 | 0x08020000 | **128 KB** | – |
-| SRAM | 0x20000000 | 0x20007FFF | 32 KB | Stack, heap, FreeRTOS data |
+| Bootloader | 0x08000000 | 0x080077FF | 30 KB | Reset logic, validation, jump |
+| Boot metadata | 0x08007800 | 0x08007FFF | 2 KB | Reserved for shared boot metadata |
+| App header | 0x08008000 | 0x080087FF | 2 KB | Header with version, size, magic, CRC, OTA flag |
+| Application | 0x08008800 | 0x0801FFFF | ~96 KB | Application firmware image |
+| SRAM | 0x20000000 | 0x20007FFF | 32 KB | Runtime data, stack, heap |
+
+## Boot flow
+
+The real boot sequence is:
+
+1. MCU power-up or reset loads the bootloader vector table from 0x08000000.
+2. `Custom_BootLoader/main.c` runs and calls validation helpers.
+3. `Boot_IsAddressValid()` verifies that the application MSP is in SRAM and that the reset handler is within the application flash range.
+4. `Boot_IsMagicValid()` checks the application header magic against `0x50505050`.
+5. `Boot_IsCrcValid()` verifies the header size is valid and computes the CRC over the application flash image.
+6. If the OTA flag is set in the header, the bootloader handles the pending update request.
+7. `Boot_JumpToApplication()` disables interrupts, resets system state, sets `SCB->VTOR`, loads the app MSP, and calls the app reset handler.
+
+This is a clean and understandable boot procedure for a single-stage application update flow.
+
+## Why the architecture is good
+
+- Clear separation of concerns between reset-time logic and runtime logic.
+- The bootloader is small and deterministic, which is ideal for embedded systems.
+- The application header creates a simple verification contract between images.
+- The shared API table lets a bootloader keep a small fixed function set available after the jump.
+- The CRC check blocks invalid firmware from being executed.
+
+## What is weak or missing for production use
+
+The current implementation is good as a proof-of-concept, but several trade-offs remain:
+
+- There is only one application slot; there is no rollback or banked firmware strategy.
+- The header size and CRC are patched manually, which increases the chance of human error.
+- The OTA flow is simple but not fully transactional; a power loss during a flash write could leave the header in an uncertain state.
+- The shared API is fixed and not versioned, so compatibility must be managed carefully.
+- There is no cryptographic signature or anti-rollback scheme.
+
+For production firmware, this would typically evolve toward a dual-bank or secure update model with signed images, version negotiation, and safer rollback logic.
+
+## Project-specific documentation
+
+- [Custom_BootLoader/README.MD](Custom_BootLoader/README.MD)
+- [Application_Jump/README.MD](Application_Jump/README.MD)
+
+## Build and deployment flow
+
+1. Build the application project.
+2. Generate the firmware binary.
+3. Patch the header values with the actual image size and CRC.
+4. Program the bootloader image.
+5. Program the application image at the application region.
+6. Reset the board and allow the bootloader to validate and jump.
+
+This design is easy to maintain in STM32CubeIDE and easy to debug interactively.
 
 ---
 
-## Boot Sequence Overview
-
-### Stage 1: Bootloader Reset
-After device reset or power-on, the Cortex-M4 reads the bootloader vector table:
-
-```text
-0x08000000 -> initial bootloader MSP value, normally 0x20008000
-0x08000004 -> bootloader Reset_Handler address, with Thumb bit set
-```
-
-The CPU loads the first value into MSP and branches to the address in the second value.
-
-### Stage 2: Application Validation
-The bootloader performs three checks:
-
-1. **Address Validation**: Reads initial MSP from `0x08008100` and reset handler from `0x08008104`. Confirms both are valid.
-2. **Magic Validation**: Reads magic value at offset `0x08` of header (`0x08008008`). Expected: `0x50505050`.
-3. **CRC Validation**: Reads CRC at offset `0x0C` of header (`0x0800800C`). Compares against calculated value.
-
-If any check fails, the bootloader enters an infinite loop.
-
-### Stage 3: Vector Table Setup
-The bootloader configures `SCB->VTOR` to point to the application's vector table:
-
-```c
-SCB->VTOR = 0x08008100;
-```
-
-### Stage 4: Jump to Application
-The bootloader calls the application's reset handler directly:
-
-```c
-appResetHandler = *(uint32_t *)(0x08008104);
-((void (*)(void))(appResetHandler))();
-```
-
-### Stage 5: Application Initialization
-The application's reset handler (generated by startup code) then:
-
-1. Calls `SystemInit()`, which reconfigures VTOR for interrupt handling
-2. Initializes C runtime (BSS, DATA sections)
-3. Calls `main()`
-
-### Complete Code and Memory Flow
-
-The following shows the complete path from hardware reset to the application `main()`.
-Values in square brackets are values stored in Flash; arrows show CPU control flow
-or register updates.
-
-```text
-HARDWARE RESET
-   |
-   | Read bootloader vector table at 0x08000000
-   | [0x08000000] = bootloader initial MSP = 0x20008000
-   | [0x08000004] = bootloader Reset_Handler | 1
-   v
-BOOTLOADER Reset_Handler
-   |
-   | startup code: MSP = 0x20008000
-   | -> SystemInit()
-   | -> copy .data / clear .bss
-   | -> __libc_init_array()
-   | -> Custom_BootLoader main() at 0x0800....
-   v
-BOOTLOADER main()
-   |
-   | Validate application:
-   |   [0x08008008] = magic
-   |   [0x0800800C] = patched CRC
-   |   [0x08008100] = application initial MSP
-   |   [0x08008104] = application Reset_Handler | 1
-   v
-Boot_JumpToApplication()
-   |
-   | Disable interrupts and stop bootloader peripherals
-   | SCB->VTOR = 0x08008100
-   | appMsp = [0x08008100] = 0x20008000
-   | MSP = appMsp ------------------------------+
-   | applicationEntry = [0x08008104]            |
-   | branch to applicationEntry() --------------+
-                                       v
-APPLICATION Reset_Handler
-   |
-   | startup code: MSP = 0x20008000
-   | -> SystemInit()
-   |    SCB->VTOR = 0x08008100
-   | -> copy .data / clear .bss
-   | -> __libc_init_array()
-   | -> main()
-   v
-APPLICATION main()
-   |
-   | HAL_Init()
-   | SystemClock_Config()
-   | osKernelInitialize() / scheduler setup
-   v
-FreeRTOS scheduler and application tasks
-```
-
-The two stack-pointer assignments are intentional. The bootloader first uses its
-own stack, then `Boot_JumpToApplication()` loads the application MSP from the first
-word of the application vector table. The application startup code initializes MSP
-again from its linker-defined `_estack` before entering `main()`.
-
-### Vector Table Addresses
-
-| Address | Contents | Used by |
-|---------|----------|---------|
-| `0x08000000` | Bootloader initial MSP | Hardware reset |
-| `0x08000004` | Bootloader `Reset_Handler` | Hardware reset |
-| `0x08008100` | Application initial MSP | Bootloader jump |
-| `0x08008104` | Application `Reset_Handler` | Bootloader jump |
-| `0x08008100` onward | Application interrupt vectors | `SCB->VTOR` after jump |
-
----
-
-## Project-Specific Configuration
-
-See the following documents for detailed configuration of each project:
-
-- **[Custom_BootLoader.md](./Custom_BootLoader/Custom_BootLoader.md)** – Bootloader validation logic, shared API, and CRC comparison
-- **[Application_Jump.md](./Application_Jump/Application_Jump.md)** – Application linker script, header placement, post-build CRC patching
-
----
-
-## STM32CubeIDE Workflow at a Glance
-
-```
-1. Build Application_Jump
-   ↓
-2. objcopy → Application_Jump.bin
-   ↓
-3. patch_crc.py → Patch size and CRC in BIN
-   ↓
-4. Verify BIN contains actual size and CRC
-   ↓
-5. Build Custom_BootLoader
-   ↓
-6. Start Custom_BootLoader debug session
-   ↓
-7. Load Application_Jump.bin at 0x08008000
-   ↓
-8. Resume bootloader execution
-   ↓
-9. Bootloader validates and jumps to application
-```
-
----
-
-## Key Configuration Files
-
-| File | Location | Purpose |
-|------|----------|---------|
-| Application Linker Script | `Application_Jump/STM32G431CBUX_FLASH.ld` | Defines APP_HEADER and FLASH regions |
-| Application Header | `Application_Jump/Core/Src/main.c` | Metadata structure with version, size, magic, CRC |
-| Post-build Script | `Application_Jump/patch_crc.py` | Calculates and patches size and CRC into BIN |
-| Bootloader Linker Script | `Custom_BootLoader/STM32G431CBUX_FLASH.ld` | Bootloader code region and shared API region |
-| Bootloader Validation | `Custom_BootLoader/Core/Src/bootloader.c` | CRC comparison and address validation logic |
-
----
-
-## Critical Distinctions
-
-### ELF vs BIN Files
-
-- **Application_Jump.elf**: Contains compile-time placeholder values for size and CRC
-  - size = 0x11111111 (placeholder)
-  - crc = 0xAAAAAAAA (placeholder)
-
-- **Application_Jump.bin**: Contains post-build patched values
-  - size = Actual application image size
-  - crc = Actual calculated CRC-32
-
-**Important**: The bootloader downloads and executes from the patched BIN, not the ELF.
-
-### Reset Handler vs Interrupt Handlers
-
-- **Reset Handler** (`0x08008104`): Called directly by bootloader, not fetched through VTOR
-- **Interrupt Handlers** (SysTick, SVC, etc.): Fetched from vector table pointed to by VTOR
-
-This distinction is critical: if `VECT_TAB_OFFSET` is misconfigured in the application, the reset handler still executes, but interrupts malfunction.
-
----
-
-## Common Mistakes and Fixes
-
-| Mistake | Effect | Fix |
-|---------|--------|-----|
-| Download Application_Jump.elf | ELF overwrites patched BIN with placeholders | Disable ELF download in debug config |
-| Using wrong BIN file | MCU gets incorrect size/CRC | Use: `Debug/Application_Jump.bin` |
-| Not setting BIN load address | BIN loads at wrong location | Set load address to `0x08008000` |
-| Regenerating BIN after patching | CubeIDE overwrites patched values | Use single post-build command |
-| Not refreshing Memory Browser | Stale values remain visible | Click Refresh in Memory Browser |
-| Starting Application_Jump debug config separately | Overwrites patched binary | Use combined Custom_BootLoader config |
-
----
-
-## Verification Checklist
-
-After building and programming:
-
-- [ ] Application_Jump.elf linked successfully
-- [ ] Application_Jump.bin generated successfully
-- [ ] patch_crc.py executed without errors
-- [ ] Memory at 0x08008000 shows actual (not placeholder) size
-- [ ] Memory at 0x08008008 shows magic = 0x50505050
-- [ ] Memory at 0x0800800C shows actual (not placeholder) CRC
-- [ ] Memory at 0x08008100 shows valid MSP (0x20000000–0x20008000)
-- [ ] Memory at 0x08008104 shows valid reset handler address
-- [ ] Bootloader reaches validation checks
-- [ ] All three validation checks pass
-- [ ] Application boots after bootloader jump
-
----
-
-## Next Steps
-
-1. **If building bootloader only**: See [Custom_BootLoader.md](./Custom_BootLoader/Custom_BootLoader.md)
-2. **If building application only**: See [Application_Jump.md](./Application_Jump/Application_Jump.md)
-3. **If debugging full system**: Follow the combined STM32CubeIDE debug configuration in [Application_Jump.md](./Application_Jump/Application_Jump.md), Section 10
-
----
-
-## Document Revision
-
-| Date | Author | Change |
-|------|--------|--------|
-| 2026-08-21 | – | Initial documentation |
+This repository is best viewed as a compact bootloader system for learning and field-level prototype firmware updates, with a clean architecture that is close to production but still intentionally minimal in its update safety features.

@@ -3,7 +3,6 @@
 *.d
 *.su
 *.cyclo
-
 # Generated build outputs
 *.elf
 *.map

@@ -20,6 +20,7 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "app_Header.h"
+#include "app_ota.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -109,6 +110,9 @@ void FillEntireRam(void)
 		*p++ = 0xAAAAAAAAU;
 	}
 }
+
+uint8_t enableOtaUpdate = 0;
+uint8_t checkifEntered = 0;
 /* USER CODE END 0 */
 
 /**
@@ -335,7 +339,13 @@ void T_500msTask(void *argument)
   for(;;)
   {
 	counter_500ms++;
+	if(enableOtaUpdate == 1)
+	{
+		checkifEntered = 1;
+		enable_ota_request();
+	}
     osDelay(500);
+
   }
   /* USER CODE END T_500msTask */
 }

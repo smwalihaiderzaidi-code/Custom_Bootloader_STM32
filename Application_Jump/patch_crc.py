@@ -3,7 +3,7 @@ import struct
 import zlib
 from pathlib import Path
 
-HEADER_SIZE = 0x100
+HEADER_SIZE = 0x800
 
 VERSION_OFFSET = 0x00
 IMAGE_SIZE_OFFSET = 0x04

@@ -1,46 +1,107 @@
 # Application Jump - STM32G431
 
 ## Overview
-`Application_Jump` is the FreeRTOS application loaded by `Custom_BootLoader` at `0x08008000`. It uses the bootloader's shared LED API and runs the application logic in three statically allocated FreeRTOS threads.
 
-## Flash Layout
+`Application_Jump` is the runtime firmware image that the bootloader validates and then jumps to. It is a FreeRTOS-based application that exposes a small metadata header and uses a bootloader-provided API to control the LED.
 
-- **Application vector table and code**: starts at `0x08008000`
-- **Application header**: fixed at `0x08008200`
-- **Shared bootloader API**: `0x08019000`
-- **Application flash region**: 68 KB, from `0x08008000` through `0x08018FFF`
-- **Shared API region**: 28 KB, from `0x08019000` through `0x0801FFFF`
+This is a sensible architecture for a firmware image because the application remains independent from the bootloader. The bootloader owns reset-time safety, and the application owns task scheduling and user functionality.
 
-The application linker script places the `.app_header` section at `0x08008200`. The header currently contains version `1`, magic value `0x50505050`, and CRC value `0x12345`.
+## Runtime responsibilities
 
-## Bootloader API
+The application does three main things:
 
-The application reads a `BootApi_t` table from `0x08019000`:
+1. exposes a fixed metadata header so that the bootloader can validate it,
+2. reads a shared function pointer table exported by the bootloader,
+3. runs FreeRTOS tasks to demonstrate the runtime behavior after a successful jump.
 
-- `Blink`
-- `TurnOn`
-- `TurnOff`
+## Actual flash contract
 
-These functions are implemented by the bootloader in its `.my_mem_text` section and exposed through its `.api_shared` section. The application uses `TurnOn` and `TurnOff` for LED control on PB9.
+The linked application layout is:
 
-## FreeRTOS Tasks
+```text
+0x08008000  Start of app header
+0x08008800  Start of application image
+0x08020000  Flash end
+```
 
-All task buffers and control blocks are statically allocated.
+The implementation defines these main interfaces:
 
-- `StartDefaultTask`: normal priority; turns the LED on and off with 300 ms delays and increments `default_counter`.
-- `T_100msTask`: high priority; increments `counter_100ms` every 100 ms.
-- `T_500msTask`: realtime priority; increments `counter_500ms` every 500 ms.
+- `AppHeader_t` in `Common/Inc/app_Header.h`
+- `BootApi_t` in `Common/Inc/app_Header.h`
+- `metadata_t` in `Common/Inc/app_Header.h`
 
-The tasks are created before `osKernelStart()` and use `osDelay()` for periodic scheduling.
+The application header stores:
 
-## Startup Behavior
+- version
+- size
+- magic
+- crc
+- ota_update
+- reserved
 
-After HAL, clock, and GPIO initialization, `main()` calls the bootloader `TurnOn` and `TurnOff` API functions 25 times with 50 ms delays, waits 2 seconds, creates the FreeRTOS tasks, and starts the scheduler.
+The bootloader reads this table before jumping.
 
-## Device Information
+## Shared API usage
 
-- **MCU**: STM32G431CBUX
-- **Total Flash**: 128 KB
-- **RAM**: 32 KB
-- **Application project**: `Core/Src/main.c`
-- **Linker script**: `STM32G431CBUX_FLASH.ld`
+The application resolves the bootloader API at startup:
+
+```c
+const metadata_t *const meta = (const metadata_t *)METADATA_ADDRESS;
+gBootApi = meta->ptrToBootApi;
+```
+
+This allows the application to call the LED functions that remain in the bootloader memory region:
+
+- `Blink()`
+- `TurnOn()`
+- `TurnOff()`
+
+This is a simple cross-image function table pattern and works well for a small embedded system.
+
+## FreeRTOS tasks
+
+The application creates and starts three static FreeRTOS tasks:
+
+- `defaultTask`: normal priority, toggles the LED in a simple periodic pattern,
+- `Task100ms`: high priority, increments a timer counter,
+- `Task500ms`: realtime priority, increments a second counter.
+
+The tasks are created after the bootloader API is used for a startup LED test sequence.
+
+## Startup sequence
+
+During `main()`, the application performs the following:
+
+1. calls `App_Init()` to fetch the shared boot API,
+2. initializes the HAL and system clock,
+3. blinks the LED several times via the bootloader API,
+4. waits briefly,
+5. creates the FreeRTOS tasks,
+6. starts the kernel.
+
+## Design strengths
+
+- The application remains independent from the bootloader flash layout.
+- The metadata header provides a clear validation contract.
+- The runtime uses a shared API instead of duplicating LED logic in the application.
+- The project is easy to debug because the app and bootloader are separated cleanly.
+
+## Design limitations
+
+The current implementation is intentionally minimal, and therefore:
+
+- the application header location and API addresses are fixed,
+- the image size and CRC must be updated in the header after build,
+- there is no secure signature check or version negotiation,
+- the application assumes the bootloader API remains compatible with the application image.
+
+## Relevant files
+
+- `Core/Src/main.c`
+- `Core/Src/app_Header.c`
+- `STM32G431CBUX_FLASH.ld`
+- `../Common/Inc/app_Header.h`
+- `../Common/Inc/flash_layout.h`
+- `../Common/Src/app_ota.c`
+
+Overall, this is a strong boot-to-application architecture for a small embedded system, with the expected limitations of a fixed flash layout and a prototype-grade update process.
