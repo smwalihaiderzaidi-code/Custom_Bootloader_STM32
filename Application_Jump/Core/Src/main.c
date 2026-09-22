@@ -145,14 +145,14 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-  for(int i=0; i<25;i++)
-  {
-	  gBootApi->TurnOn();
-	    HAL_Delay(50);
-	    gBootApi->TurnOff();
-	    HAL_Delay(50);
-  }
-  HAL_Delay(2000);
+//  for(int i=0; i<25;i++)
+//  {
+//	  gBootApi->TurnOn();
+//	    HAL_Delay(50);
+//	    gBootApi->TurnOff();
+//	    HAL_Delay(50);
+//  }
+//  HAL_Delay(2000);
   /* USER CODE END 2 */
 
   /* Init scheduler */

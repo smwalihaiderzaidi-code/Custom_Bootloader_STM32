@@ -89,24 +89,17 @@ int main(void)
 
   Boot_IsUpdateAvailable();
 
-  bool addrValid = Boot_IsAddressValid();
-  bool magicValid = Boot_IsMagicValid();
-  bool crcValid = Boot_IsCrcValid();
+  blstatus = BOOTLOADER_APP_VALID;
 
-  if (!addrValid)
+  Boot_IsAddressValid();
+  Boot_IsMagicValid();
+  Boot_IsCrcValid();
+
+  if (blstatus != BOOTLOADER_APP_VALID)
   {
-	  while (1);
-  }
-
-  if (!magicValid)
-  {
-	  while (1);
-  }
-
-
-  if (!crcValid)
-  {
-	  while (1);
+      while (1)
+      {
+      }
   }
 
   Boot_JumpToApplication();

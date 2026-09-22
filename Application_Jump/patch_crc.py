@@ -10,7 +10,6 @@ IMAGE_SIZE_OFFSET = 0x04
 MAGIC_OFFSET = 0x08
 IMAGE_CRC_OFFSET = 0x0C
 
-EXPECTED_MAGIC = 0x50505050
 
 
 def main():
@@ -31,14 +30,6 @@ def main():
         return 1
 
     version = struct.unpack_from("<I", image, VERSION_OFFSET)[0]
-    magic = struct.unpack_from("<I", image, MAGIC_OFFSET)[0]
-
-    if magic != EXPECTED_MAGIC:
-        print(
-            f"ERROR: Invalid magic: 0x{magic:08X}, "
-            f"expected: 0x{EXPECTED_MAGIC:08X}"
-        )
-        return 1
 
     # Skip the complete 256-byte header.
     # CRC includes vector table and remaining application image.
@@ -54,7 +45,6 @@ def main():
     binary_path.write_bytes(image)
 
     print(f"Version    : {version}")
-    print(f"Magic      : 0x{magic:08X}")
     print(f"Image size : {image_size} bytes")
     print(f"Image CRC  : 0x{image_crc:08X}")
     print(f"Patched    : {binary_path}")

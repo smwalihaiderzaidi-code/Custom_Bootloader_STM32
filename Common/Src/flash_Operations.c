@@ -12,13 +12,41 @@ void flash_read_page(uint32_t *page_start_addr, uint32_t *buffer)
     }
 }
 
+void flash_write_buffer(uint32_t destination, const uint8_t *source, uint32_t length)
+{
+    uint32_t offset = 0U;
+
+    HAL_FLASH_Unlock();
+
+    while (offset < length)
+    {
+        uint32_t remaining = length - offset;
+        uint64_t value = 0U;
+        uint32_t write_count = (remaining >= 8U) ? 8U : remaining;
+
+        for (uint32_t i = 0U; i < write_count; i++)
+        {
+            ((uint8_t *)&value)[i] = source[offset + i];
+        }
+
+        if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, destination + offset, value) != HAL_OK)
+        {
+            break;
+        }
+
+        offset += write_count;
+    }
+
+    HAL_FLASH_Lock();
+}
+
 void flash_erase_page(uint32_t page_address)
 {
     uint32_t page_index = page_address;
     FLASH_EraseInitTypeDef erase;
     uint32_t page_error = 0U;
     HAL_StatusTypeDef status;
-    HAL_StatusTypeDef lockstatus;
+
 
     if ((page_address >= FLASH_BASE) && (page_address < (FLASH_BASE + FLASH_SIZE)))
     {
@@ -35,12 +63,44 @@ void flash_erase_page(uint32_t page_address)
                            FLASH_FLAG_MISERR | FLASH_FLAG_FASTERR | FLASH_FLAG_RDERR |
                            FLASH_FLAG_OPTVERR);
 
-    lockstatus = HAL_FLASH_Unlock();
+    HAL_FLASH_Unlock();
     status = HAL_FLASHEx_Erase(&erase, &page_error);
-    lockstatus = HAL_FLASH_Lock();
+    HAL_FLASH_Lock();
 
     (void)status;
     (void)page_error;
+}
+
+void flash_erase_pages(uint32_t start_address, uint32_t end_address)
+{
+    uint32_t current_page = start_address;
+    uint32_t aligned_end = end_address;
+
+    if ((start_address % FLASH_PAGE_SIZE) != 0U)
+    {
+        current_page = (start_address / FLASH_PAGE_SIZE) * FLASH_PAGE_SIZE;
+    }
+
+    if ((aligned_end % FLASH_PAGE_SIZE) != 0U)
+    {
+        aligned_end = ((aligned_end / FLASH_PAGE_SIZE) + 1U) * FLASH_PAGE_SIZE;
+    }
+
+    while (current_page < aligned_end)
+    {
+        flash_erase_page(current_page);
+        current_page += FLASH_PAGE_SIZE;
+    }
+}
+
+void flash_erase_application_region(void)
+{
+    flash_erase_pages(FLASH_APPLICATION_START, FLASH_APPLICATION_END);
+}
+
+void flash_erase_header_region(void)
+{
+    flash_erase_pages(FLASH_APP_HEADER_START, FLASH_APP_HEADER_END);
 }
 
 void flash_write_page(uint32_t *page_start_addr, uint32_t *buffer)
@@ -48,8 +108,8 @@ void flash_write_page(uint32_t *page_start_addr, uint32_t *buffer)
     volatile uint32_t *address = (volatile uint32_t *)page_start_addr;
     uint32_t *source = buffer;
     HAL_StatusTypeDef status = HAL_OK;
-    HAL_StatusTypeDef lockstatus;
-    lockstatus = HAL_FLASH_Unlock();
+
+    HAL_FLASH_Unlock();
 
     for (uint32_t i = 0U; i < APP_HEADER_WORDS; i += 2U)
     {
@@ -63,6 +123,6 @@ void flash_write_page(uint32_t *page_start_addr, uint32_t *buffer)
         }
     }
 
-    lockstatus = HAL_FLASH_Lock();
+    HAL_FLASH_Lock();
     (void)status;
 }

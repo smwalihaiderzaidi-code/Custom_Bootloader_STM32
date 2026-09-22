@@ -1,6 +1,6 @@
-../Core/Src/bootloader.c:11:6:Boot_IsUpdateAvailable	2
-../Core/Src/bootloader.c:20:17:Boot_CalculateCRC32	4
-../Core/Src/bootloader.c:45:6:Boot_IsAddressValid	6
-../Core/Src/bootloader.c:80:6:Boot_IsMagicValid	2
-../Core/Src/bootloader.c:93:6:Boot_IsCrcValid	8
-../Core/Src/bootloader.c:137:6:Boot_JumpToApplication	2
+../Core/Src/bootloader.c:15:6:Boot_IsUpdateAvailable	3
+../Core/Src/bootloader.c:32:17:Boot_CalculateCRC32	4
+../Core/Src/bootloader.c:57:6:Boot_IsAddressValid	6
+../Core/Src/bootloader.c:92:6:Boot_IsMagicValid	2
+../Core/Src/bootloader.c:105:6:Boot_IsCrcValid	8
+../Core/Src/bootloader.c:149:6:Boot_JumpToApplication	2

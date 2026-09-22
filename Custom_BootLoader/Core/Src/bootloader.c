@@ -3,18 +3,30 @@
 #include "stm32g4xx.h"
 #include "stm32g4xx_hal.h"
 #include "app_ota.h"
+#include "flash_Operations.h"
+#include "Application_OTA_Upd_header.h"
+#include <string.h>
+
 
 typedef void (*ApplicationEntry_t)(void);
 
 BootloaderStatus_t blstatus;
 
-void Boot_IsUpdateAvailable()
+void Boot_IsUpdateAvailable(void)
 {
-	if(check_ota_flag() == 1)
-	{
-		while(1);
-	}
+    if (ota_request_pending())
+    {
+        uint32_t image_total_size = (uint32_t)sizeof(fw_image);
 
+        if (!ota_write_firmware_image(FLASH_APP_HEADER_START, fw_image, image_total_size))
+        {
+            while (1)
+            {
+            }
+        }
+
+        ota_clear_request_flag();
+    }
 }
 
 static uint32_t Boot_CalculateCRC32(const uint8_t *data,

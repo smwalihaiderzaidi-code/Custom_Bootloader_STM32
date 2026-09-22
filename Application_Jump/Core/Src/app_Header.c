@@ -10,13 +10,22 @@ void App_Init(void)
     gBootApi = meta->ptrToBootApi;
 }
 
+
+/**
+	@brief  - This is a temp meta data, python script "patch_crc.py" will a generate metadata and patch is to same bin file.
+	updated parameters:
+					version
+					size
+					crc
+
+*/
 __attribute__((section(".app_header"), used))
 const AppHeader_t appheader =
 {
-    .version = 1U,
-    .size = 0x11111111U,
+    .version = 0,
+    .size = 0,
     .magic = 0x50505050U,
-    .crc = 0xAAAAAAAAU,
+    .crc = 0,
     .ota_update = 0U,
     .reserved = 0xFFFFFFFFU
 };

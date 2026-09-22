@@ -27,7 +27,10 @@ Core/Src/bootloader.o: ../Core/Src/bootloader.c ../Core/Inc/bootloader.h \
  ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_flash_ramfunc.h \
  ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr.h \
  ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr_ex.h \
- C:/ST/workspace/GitHub/Common/Inc/app_ota.h
+ C:/ST/workspace/GitHub/Common/Inc/app_ota.h \
+ C:/ST/workspace/GitHub/Common/Inc/app_Header.h \
+ C:/ST/workspace/GitHub/Common/Inc/flash_Operations.h \
+ ../Core/Inc/Application_OTA_Upd_header.h
 ../Core/Inc/bootloader.h:
 C:/ST/workspace/GitHub/Common/Inc/flash_layout.h:
 C:/ST/workspace/GitHub/Common/Inc/app_Header.h:
@@ -58,3 +61,6 @@ C:/ST/workspace/GitHub/Common/Inc/flash_layout.h:
 ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr.h:
 ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr_ex.h:
 C:/ST/workspace/GitHub/Common/Inc/app_ota.h:
+C:/ST/workspace/GitHub/Common/Inc/app_Header.h:
+C:/ST/workspace/GitHub/Common/Inc/flash_Operations.h:
+../Core/Inc/Application_OTA_Upd_header.h:
